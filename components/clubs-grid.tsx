@@ -1,135 +1,101 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { Users, Music } from "lucide-react"
+import { Users, Music } from 'lucide-react'
+import { roomsAPI } from "@/lib/api-service"
 
-type Club = {
-  id: string
-  title: string
-  host: string
-  attendees: string
-  thumbnail: string
-  genre: string
-  tags?: string[]
+type Room = {
+  id: number;
+  name: string;
+  size: number;
+  capacity: number;
 }
 
 export function ClubsGrid() {
-  const clubs: Club[] = [
-    {
-      id: "neon-lounge",
-      title: "Neon Lounge - Weekend Party",
-      host: "DJ Virtual",
-      attendees: "398",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "Electronic",
-      tags: ["Dance", "Party"],
-    },
-    {
-      id: "virtual-beats",
-      title: "Virtual Beats - Avatar Dance Night",
-      host: "DJ Pixel",
-      attendees: "285",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "House",
-      tags: ["Dance", "Avatars"],
-    },
-    {
-      id: "digital-disco",
-      title: "Digital Disco - Retro Night",
-      host: "DJ Binary",
-      attendees: "272",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "Disco",
-      tags: ["Retro", "Dance"],
-    },
-    {
-      id: "cyber-jazz",
-      title: "Cyber Jazz - Smooth Vibes",
-      host: "DJ Neural",
-      attendees: "156",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "Jazz",
-      tags: ["Chill", "Lounge"],
-    },
-    {
-      id: "pixel-party",
-      title: "Pixel Party - 8-bit Night",
-      host: "DJ 8Bit",
-      attendees: "207",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "Chiptune",
-      tags: ["Retro", "Gaming"],
-    },
-    {
-      id: "vr-techno",
-      title: "VR Techno - Deep Space",
-      host: "DJ Matrix",
-      attendees: "536",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "Techno",
-      tags: ["Dance", "Immersive"],
-    },
-    {
-      id: "meta-hiphop",
-      title: "Meta Hip-Hop - Avatar Cypher",
-      host: "DJ Virtual MC",
-      attendees: "381",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "Hip-Hop",
-      tags: ["Urban", "Avatars"],
-    },
-    {
-      id: "gtu-official",
-      title: "GTU Official - University Night",
-      host: "GTU Team",
-      attendees: "210",
-      thumbnail: "/placeholder.svg?height=180&width=320",
-      genre: "Various",
-      tags: ["University", "Social"],
-    },
-  ]
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoading(true)
+        const data = await roomsAPI.getAll()
+        setRooms(data)
+      } catch (error) {
+        console.error("Error fetching rooms:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRooms()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {[...Array(8)].map((_, index) => (
+          <Card key={index} className="overflow-hidden border-0 bg-zinc-900/50 animate-pulse">
+            <CardContent className="p-0">
+              <div className="w-full aspect-video bg-zinc-800/50 rounded-t-md"></div>
+              <div className="p-3">
+                <div className="flex gap-2">
+                  <div className="w-9 h-9 rounded-full bg-zinc-800/50 flex-shrink-0"></div>
+                  <div className="space-y-2">
+                    <div className="h-4 w-32 bg-zinc-800/50 rounded"></div>
+                    <div className="h-3 w-20 bg-zinc-800/50 rounded"></div>
+                    <div className="h-3 w-24 bg-zinc-800/50 rounded"></div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {clubs.map((club) => (
-        <Link href={`/club/${club.id}`} key={club.id}>
+      {rooms.map((room) => (
+        <Link href={`/club/${room.id}`} key={room.id}>
           <Card className="overflow-hidden border-0 bg-zinc-900/50 hover:bg-zinc-800/70 transition-colors group">
             <CardContent className="p-0">
               <div className="relative">
                 <img
-                  src={club.thumbnail || "/placeholder.svg"}
-                  alt={club.title}
+                  src={`/placeholder.svg?height=180&width=320&text=${encodeURIComponent(room.name)}`}
+                  alt={room.name}
                   className="w-full aspect-video object-cover rounded-t-md group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute top-2 left-2 bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded">
                   LIVE
                 </div>
                 <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded flex items-center gap-1">
-                  <Users className="h-3 w-3" /> {club.attendees}
+                  <Users className="h-3 w-3" /> {room.size}/{room.capacity}
                 </div>
               </div>
 
               <div className="p-3">
                 <div className="flex gap-2">
                   <div className="w-9 h-9 rounded-full bg-purple-900/50 flex-shrink-0 flex items-center justify-center text-purple-200">
-                    {club.host.charAt(0)}
+                    {room.name.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-medium text-sm line-clamp-1 text-purple-100">{club.title}</h3>
-                    <p className="text-xs text-purple-300">{club.host}</p>
+                    <h3 className="font-medium text-sm line-clamp-1 text-purple-100">{room.name}</h3>
+                    <p className="text-xs text-purple-300">Host: {room.name.split(' ')[0]}</p>
                     <p className="text-xs text-purple-400 flex items-center gap-1">
-                      <Music className="h-3 w-3" /> {club.genre}
+                      <Music className="h-3 w-3" /> Electronic
                     </p>
-                    {club.tags && (
-                      <div className="flex gap-1 mt-1 flex-wrap">
-                        {club.tags.map((tag, index) => (
-                          <span key={index} className="text-xs bg-purple-900/30 text-purple-200 px-1.5 py-0.5 rounded">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      <span className="text-xs bg-purple-900/30 text-purple-200 px-1.5 py-0.5 rounded">
+                        Virtual
+                      </span>
+                      <span className="text-xs bg-purple-900/30 text-purple-200 px-1.5 py-0.5 rounded">
+                        Club
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>

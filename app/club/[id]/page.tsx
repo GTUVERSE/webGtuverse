@@ -9,28 +9,33 @@ import { Sidebar } from "@/components/sidebar"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { MessageSquare, Users, Share2, Heart, Volume2, Music } from "lucide-react"
+import { MessageSquare, Users, Share2, Heart, Volume2, Music } from 'lucide-react'
+import { roomsAPI } from "@/lib/api-service"
+import { useAuth } from "@/lib/auth-context"
 
-type Club = {
-  id: string
-  title: string
-  host: string
-  attendees: string
-  thumbnail: string
-  genre: string
-  description: string
-  videoUrl?: string
+type Room = {
+  id: number;
+  name: string;
+  size: number;
+  capacity: number;
+}
+
+type RoomUser = {
+  id: number;
+  username: string;
+  email: string;
 }
 
 export default function ClubPage() {
   const params = useParams()
-  const clubId = params.id as string
-  const [club, setClub] = useState<Club | null>(null)
+  const roomId = parseInt(params.id as string)
+  const [room, setRoom] = useState<Room | null>(null)
+  const [roomUsers, setRoomUsers] = useState<RoomUser[]>([])
   const [loading, setLoading] = useState(true)
   const [chatMessage, setChatMessage] = useState("")
-  const videoRef = useRef<HTMLVideoElement>(null)
-
-  // Mock chat messages
+  const { user } = useAuth()
+  
+  // Mock chat messages - gerçek bir chat API'niz olduğunda bunu değiştirin
   const [chatMessages, setChatMessages] = useState([
     { id: 1, user: "AvatarDancer", message: "This club is amazing tonight!" },
     { id: 2, user: "VirtualVibes", message: "Love the music selection!" },
@@ -38,25 +43,55 @@ export default function ClubPage() {
     { id: 4, user: "MetaPartyGoer", message: "The avatar animations are so smooth!" },
   ])
 
+  // Odayı ve kullanıcılarını yükle
   useEffect(() => {
-    // Simulate API fetch
-    setTimeout(() => {
-      // Mock data - in a real app, this would come from an API
-      const mockClub: Club = {
-        id: clubId,
-        title: "Neon Lounge - Weekend Party",
-        host: "DJ Virtual",
-        attendees: "536",
-        thumbnail: "/placeholder.svg?height=720&width=1280",
-        genre: "Electronic",
-        description:
-          "Welcome to the Neon Lounge, the hottest virtual club in GTUVERSE! Tonight we're featuring real-time avatar motion mapping with our advanced motion detection technology. Watch as our professional dancers' movements are captured and applied to virtual avatars in real-time.",
-        videoUrl: "https://example.com/placeholder-video.mp4", // This would be a real video URL in production
+    const fetchRoomData = async () => {
+      try {
+        setLoading(true);
+        const roomData = await roomsAPI.getById(roomId);
+        setRoom(roomData);
+        
+        const usersData = await roomsAPI.getUsers(roomId);
+        setRoomUsers(usersData);
+      } catch (error) {
+        console.error("Error fetching room data:", error);
+      } finally {
+        setLoading(false);
       }
-      setClub(mockClub)
-      setLoading(false)
-    }, 1000)
-  }, [clubId])
+    };
+    
+    if (roomId) {
+      fetchRoomData();
+    }
+  }, [roomId]);
+
+  // Kullanıcıyı odaya ekle
+  const joinRoom = async () => {
+    if (!user || !room) return;
+    
+    try {
+      await roomsAPI.addUser(roomId, user.id);
+      // Kullanıcı listesini güncelle
+      const usersData = await roomsAPI.getUsers(roomId);
+      setRoomUsers(usersData);
+    } catch (error) {
+      console.error("Error joining room:", error);
+    }
+  };
+
+  // Kullanıcıyı odadan çıkar
+  const leaveRoom = async () => {
+    if (!user || !room) return;
+    
+    try {
+      await roomsAPI.removeUser(roomId, user.id);
+      // Kullanıcı listesini güncelle
+      const usersData = await roomsAPI.getUsers(roomId);
+      setRoomUsers(usersData);
+    } catch (error) {
+      console.error("Error leaving room:", error);
+    }
+  };
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,7 +100,7 @@ export default function ClubPage() {
         ...chatMessages,
         {
           id: chatMessages.length + 1,
-          user: "You",
+          user: user?.username || "Guest",
           message: chatMessage,
         },
       ])
@@ -84,7 +119,7 @@ export default function ClubPage() {
     )
   }
 
-  if (!club) {
+  if (!room) {
     return (
       <div className="min-h-screen flex flex-col bg-black">
         <Navbar />
@@ -94,6 +129,9 @@ export default function ClubPage() {
       </div>
     )
   }
+
+  // Kullanıcının odada olup olmadığını kontrol et
+  const isUserInRoom = user ? roomUsers.some(roomUser => roomUser.id === user.id) : false;
 
   return (
     <div className="min-h-screen flex flex-col bg-black text-purple-50">
@@ -106,14 +144,14 @@ export default function ClubPage() {
           {/* Video Player */}
           <div className="lg:col-span-3 space-y-4">
             <div className="relative aspect-video bg-zinc-900 rounded-lg overflow-hidden">
-              {/* This is where you would embed the avatar video */}
+              {/* Avatar video placeholder */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center p-8">
                   <p className="text-purple-300 mb-4">Avatar video would be displayed here</p>
                   <div className="w-full h-full bg-gradient-to-r from-purple-900/30 via-pink-800/30 to-blue-900/30 absolute inset-0"></div>
                   <img
-                    src={club.thumbnail || "/placeholder.svg"}
-                    alt={club.title}
+                    src="/placeholder.svg?height=720&width=1280"
+                    alt={room.name}
                     className="w-full h-full object-cover absolute inset-0 -z-10 opacity-50"
                   />
                 </div>
@@ -122,7 +160,7 @@ export default function ClubPage() {
                 LIVE
               </div>
               <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                <Users className="h-3 w-3" /> {club.attendees}
+                <Users className="h-3 w-3" /> {room.size}/{room.capacity}
               </div>
 
               {/* Video controls overlay */}
@@ -147,34 +185,48 @@ export default function ClubPage() {
 
             <div className="flex items-start gap-4">
               <Avatar className="h-12 w-12 ring-2 ring-purple-600">
-                <AvatarImage src="/placeholder.svg" alt={club.host} />
-                <AvatarFallback className="bg-purple-900">{club.host[0]}</AvatarFallback>
+                <AvatarImage src="/placeholder.svg" alt="Host" />
+                <AvatarFallback className="bg-purple-900">H</AvatarFallback>
               </Avatar>
 
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-purple-100">{club.title}</h1>
+                <h1 className="text-2xl font-bold text-purple-100">{room.name}</h1>
                 <div className="flex items-center gap-2 text-sm text-purple-300">
-                  <span>{club.host}</span>
+                  <span>Host: {roomUsers[0]?.username || "Unknown"}</span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <Music className="h-3 w-3" /> {club.genre}
+                    <Music className="h-3 w-3" /> Electronic
                   </span>
                   <span>•</span>
                   <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {club.attendees} attending
+                    <Users className="h-3 w-3" /> {room.size}/{room.capacity} attending
                   </span>
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-purple-700 text-purple-300 hover:bg-purple-900/30"
-                >
-                  <Heart className="h-4 w-4 mr-2" />
-                  Follow
-                </Button>
+                {user && (
+                  isUserInRoom ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-700 text-red-300 hover:bg-red-900/30"
+                      onClick={leaveRoom}
+                    >
+                      Leave Club
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-green-700 text-green-300 hover:bg-green-900/30"
+                      onClick={joinRoom}
+                      disabled={room.size >= room.capacity}
+                    >
+                      Join Club
+                    </Button>
+                  )
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -188,7 +240,26 @@ export default function ClubPage() {
 
             <div className="p-4 bg-zinc-900/50 rounded-lg border border-purple-900/30">
               <h2 className="font-semibold mb-2 text-purple-200">About this Club</h2>
-              <p className="text-sm text-purple-300">{club.description}</p>
+              <p className="text-sm text-purple-300">
+                Welcome to {room.name}, a virtual club in GTUVERSE! Here you can experience real-time avatar motion mapping with our advanced motion detection technology.
+              </p>
+            </div>
+            
+            {/* Kullanıcı Listesi */}
+            <div className="p-4 bg-zinc-900/50 rounded-lg border border-purple-900/30">
+              <h2 className="font-semibold mb-2 text-purple-200">Club Members ({roomUsers.length}/{room.capacity})</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {roomUsers.map((roomUser) => (
+                  <div key={roomUser.id} className="flex items-center gap-2 p-2 bg-zinc-800/50 rounded">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-purple-900 text-purple-100">
+                        {roomUser.username.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-purple-200">{roomUser.username}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

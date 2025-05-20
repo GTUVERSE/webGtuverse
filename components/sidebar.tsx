@@ -1,102 +1,42 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, ChevronUp, Music } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronDown, ChevronUp, Music } from 'lucide-react'
 import Link from "next/link"
+import { roomsAPI } from "@/lib/api-service"
+import { useAuth } from "@/lib/auth-context"
 
-type Club = {
-  id: string
-  name: string
-  attendees: string
-  genre: string
-  avatar?: string
-  isLive?: boolean
+type Room = {
+  id: number;
+  name: string;
+  size: number;
+  capacity: number;
 }
 
 export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [showAllClubs, setShowAllClubs] = useState(false)
+  const [showAllRooms, setShowAllRooms] = useState(false)
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
 
-  const popularClubs: Club[] = [
-    {
-      id: "neon-lounge",
-      name: "Neon Lounge",
-      attendees: "398",
-      genre: "Electronic",
-      avatar: "/placeholder.svg?height=30&width=30",
-      isLive: true,
-    },
-    {
-      id: "virtual-beats",
-      name: "Virtual Beats",
-      attendees: "285",
-      genre: "House",
-      avatar: "/placeholder.svg?height=30&width=30",
-      isLive: true,
-    },
-    {
-      id: "digital-disco",
-      name: "Digital Disco",
-      attendees: "272",
-      genre: "Disco",
-      avatar: "/placeholder.svg?height=30&width=30",
-      isLive: true,
-    },
-    {
-      id: "cyber-jazz",
-      name: "Cyber Jazz",
-      attendees: "156",
-      genre: "Jazz",
-      avatar: "/placeholder.svg?height=30&width=30",
-    },
-    {
-      id: "pixel-party",
-      name: "Pixel Party",
-      attendees: "207",
-      genre: "Pop",
-      avatar: "/placeholder.svg?height=30&width=30",
-      isLive: true,
-    },
-    {
-      id: "vr-techno",
-      name: "VR Techno",
-      attendees: "536",
-      genre: "Techno",
-      avatar: "/placeholder.svg?height=30&width=30",
-      isLive: true,
-    },
-    {
-      id: "meta-hiphop",
-      name: "Meta Hip-Hop",
-      attendees: "381",
-      genre: "Hip-Hop",
-      avatar: "/placeholder.svg?height=30&width=30",
-    },
-    {
-      id: "avatar-rock",
-      name: "Avatar Rock",
-      attendees: "255",
-      genre: "Rock",
-      avatar: "/placeholder.svg?height=30&width=30",
-    },
-    {
-      id: "digital-ambient",
-      name: "Digital Ambient",
-      attendees: "134",
-      genre: "Ambient",
-      avatar: "/placeholder.svg?height=30&width=30",
-    },
-    {
-      id: "gtu-official",
-      name: "GTU Official",
-      attendees: "210",
-      genre: "Various",
-      avatar: "/placeholder.svg?height=30&width=30",
-      isLive: true,
-    },
-  ]
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        setLoading(true)
+        const data = await roomsAPI.getAll()
+        setRooms(data)
+      } catch (error) {
+        console.error("Error fetching rooms:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  const displayedClubs = showAllClubs ? popularClubs : popularClubs.slice(0, 5)
+    fetchRooms()
+  }, [])
+
+  const displayedRooms = showAllRooms ? rooms : rooms.slice(0, 5)
 
   if (isCollapsed) {
     return (
@@ -107,17 +47,13 @@ export function Sidebar() {
         >
           <ChevronDown className="h-5 w-5" />
         </button>
-        {popularClubs.slice(0, 10).map((club, index) => (
-          <Link href={`/club/${club.id}`} key={index}>
-            <div className="p-2 hover:bg-purple-900/30 flex justify-center cursor-pointer relative" title={club.name}>
-              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden">
-                {club.avatar ? (
-                  <img src={club.avatar || "/placeholder.svg"} alt={club.name} className="w-full h-full object-cover" />
-                ) : (
-                  club.name.charAt(0)
-                )}
+        {rooms.slice(0, 10).map((room) => (
+          <Link href={`/club/${room.id}`} key={room.id}>
+            <div className="p-2 hover:bg-purple-900/30 flex justify-center cursor-pointer relative" title={room.name}>
+              <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden text-purple-200">
+                {room.name.charAt(0)}
               </div>
-              {club.isLive && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
+              {room.size > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>}
             </div>
           </Link>
         ))}
@@ -135,43 +71,65 @@ export function Sidebar() {
       </div>
 
       <div className="py-2">
-        {displayedClubs.map((club, index) => (
-          <Link href={`/club/${club.id}`} key={index}>
-            <div className="flex items-center justify-between px-4 py-2 hover:bg-purple-900/30 cursor-pointer">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden relative">
-                  {club.avatar ? (
-                    <img
-                      src={club.avatar || "/placeholder.svg"}
-                      alt={club.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    club.name.charAt(0)
-                  )}
-                  {club.isLive && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 border border-zinc-900 rounded-full"></span>
-                  )}
+        {loading ? (
+          // Loading state
+          [...Array(5)].map((_, index) => (
+            <div key={index} className="px-4 py-2">
+              <div className="flex items-center gap-2 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-zinc-800/50"></div>
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 w-24 bg-zinc-800/50 rounded"></div>
+                  <div className="h-2 w-16 bg-zinc-800/50 rounded"></div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-purple-100">{club.name}</p>
-                  <p className="text-xs text-purple-400">{club.genre}</p>
-                </div>
+                <div className="h-2 w-8 bg-zinc-800/50 rounded"></div>
               </div>
-              <span className="text-xs text-purple-400">{club.attendees}</span>
             </div>
-          </Link>
-        ))}
+          ))
+        ) : (
+          // Rooms list
+          displayedRooms.map((room) => (
+            <Link href={`/club/${room.id}`} key={room.id}>
+              <div className="flex items-center justify-between px-4 py-2 hover:bg-purple-900/30 cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center overflow-hidden relative text-purple-200">
+                    {room.name.charAt(0)}
+                    {room.size > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 border border-zinc-900 rounded-full"></span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-purple-100">{room.name}</p>
+                    <p className="text-xs text-purple-400">Electronic</p>
+                  </div>
+                </div>
+                <span className="text-xs text-purple-400">{room.size}/{room.capacity}</span>
+              </div>
+            </Link>
+          ))
+        )}
 
-        {popularClubs.length > 5 && (
+        {rooms.length > 5 && (
           <button
-            onClick={() => setShowAllClubs(!showAllClubs)}
+            onClick={() => setShowAllRooms(!showAllRooms)}
             className="w-full text-left px-4 py-2 text-sm text-purple-500 hover:bg-purple-900/30"
           >
-            {showAllClubs ? "Show less" : "Show more"}
+            {showAllRooms ? "Show less" : "Show more"}
           </button>
         )}
       </div>
+
+      {user && (
+        <div className="p-4 border-t border-purple-900/50">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-semibold text-sm text-purple-300">CREATE NEW CLUB</h2>
+            <Link href="/create-club">
+              <button className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-2 py-1 rounded">
+                New
+              </button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 border-t border-purple-900/50">
         <h2 className="font-semibold text-sm mb-2 text-purple-300">POPULAR GENRES</h2>
