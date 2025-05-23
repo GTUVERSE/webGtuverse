@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/sidebar"
 import { FeaturedCarousel } from "@/components/featured-carousel"
 import { StreamsGrid } from "@/components/streams-grid"
 import { ProtectedRoute } from "@/components/protected-route"
+import UserRoomActions from "@/components/UserRoomActions"
 
 export default function DashboardPage() {
   return (
@@ -32,6 +33,12 @@ export default function DashboardPage() {
                 <h2 className="text-2xl font-bold mb-4">Recent Activity</h2>
                 <div className="bg-muted/50 rounded-lg p-8 text-center">
                   <p className="text-muted-foreground">Your recent activity will appear here</p>
+                </div>
+              </section>
+              {/* Kullanıcı ve Oda İşlemleri */}
+              <section>
+                <div className="mt-8">
+                  <UserRoomActions />
                 </div>
               </section>
             </div>
